@@ -1,0 +1,88 @@
+#SERP model with LiDAR
+
+bodies:
+
+  - name: base_link
+    enabled: true
+    pose: [0, 0, 0]
+    type: dynamic
+    color: [0, 0, 1, 0.75]
+    footprints:
+      - type: polygon
+        density: 1
+        layers: ["collisions_layer", "end_laser_layer"]
+        points: [ [-0.117, -0.055],
+                  [0.048, -0.055],
+                  [0.048, 0.055],
+                  [-0.117, 0.055] ]
+
+  - name: left_wheel
+    color: [1, 1, 0, 0.75] 
+    footprints:
+      - type: polygon
+        density: 1.0
+        layers: ["collisions_layer", "end_laser_layer"]
+        points: [ [ -0.035, -0.0125],
+                  [ 0.035,  -0.0125],
+                  [ 0.035, 0.0125],
+                  [ -0.035, 0.0125] ]
+  - name: right_wheel
+    color: [1, 1, 0, 0.75] 
+    footprints:
+      - type: polygon
+        density: 1.0
+        layers: ["collisions_layer", "end_laser_layer"]
+        points: [ [ -0.035, -0.0125],
+                  [ 0.035,  -0.0125],
+                  [ 0.035, 0.0125],
+                  [ -0.035, 0.0125] ]
+
+joints: 
+  - type: weld
+    name: left_wheel_weld
+    bodies: 
+      - name: left_wheel
+        anchor: [0, 0]
+      - name: base_link
+        anchor: [0, -0.0725]
+
+  - type: weld
+    name: right_wheel_weld  
+    bodies: 
+      - name: right_wheel
+        anchor: [0, 0]
+      - name: base_link
+        anchor: [0, 0.0725]
+
+plugins:
+  - type: DiffDrive
+    name: serp_diff_drive
+    body: base_link
+    pub_rate: 10
+    twist_sub: cmd_vel
+    odom_frame_id: odom
+    odom_pub: odom  # topic odom is published on
+  
+  # needed for some visualization components
+  - type: ModelTfPublisher
+    name: tf_publisher
+    publish_tf_world: false
+
+  # simulates a lidar by having 90 lasers evenly spread around the model
+  - type: Laser
+    name: static_laser
+    frame: static_laser_link
+    topic: static_laser
+    body: base_link
+    broadcast_tf: true
+    origin: [0.0, 0.0, 0.0]
+    range: 10
+    angle: {min: -3.14159265359, max: 3.14159265359, increment: 0.06981317007}
+    noise_std_dev: 0.015
+    update_rate: 10
+    layers: ["serp_laser_layer"]
+
+  - type: Bumper
+    name: bumper
+    topic: collisions
+    update_rate: 10

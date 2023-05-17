@@ -1,0 +1,9 @@
+do-reset: True
+do-stop: True
+do-odometry: False
+max-linVel: 2.0
+linAcc: 1.5
+linDec: 3.0
+max-angVel: 3.0
+angAcc: 8.0
+angDec: 8.0

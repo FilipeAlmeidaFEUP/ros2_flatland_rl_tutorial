@@ -1,0 +1,29 @@
+#End beacon model with LiDAR
+
+bodies:
+  - name: base_prox
+    enabled: true
+    pose: [0, 0, 0]
+    type: dynamic
+    color: [0, 1, 0, 0.75]
+    footprints:
+      - type: circle
+        radius: 0.1
+        center: [0.0, 0.0]
+        density: 1
+        layers: ["end_beacon_layer"]
+
+plugins:
+  # lidar identical to the one from serp model but ignores walls
+  - type: Laser
+    name: end_beacon_laser
+    frame: end_beacon_link
+    topic: end_beacon_laser
+    body: base_prox
+    broadcast_tf: true
+    origin: [0.0, 0.0, 0.0]
+    range: 10
+    angle: {min: -3.14159265359, max: 3.14159265359, increment: 0.06981317007}
+    noise_std_dev: 0.015
+    update_rate: 10
+    layers: ["end_laser_layer"]
