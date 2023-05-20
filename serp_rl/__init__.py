@@ -172,17 +172,17 @@ class SerpControllerEnv(Node, Env):
 
         model = PPO("MlpPolicy", self, verbose=1)
         model.learn(total_timesteps=25000)
-        model.save("ppo_cartpole")
+        model.save("ppo")
 
         del model 
 
-        model = PPO.load("ppo_cartpole")
+        model = PPO.load("ppo")
+
 
         obs = self.reset()
         while True:
             action, _states = model.predict(obs)
             obs, rewards, dones, info = self.step(action)
-            self.render("human")
 
 def main(args = None):
     rclpy.init()
