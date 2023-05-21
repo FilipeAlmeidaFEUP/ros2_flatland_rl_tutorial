@@ -75,12 +75,10 @@ class SerpControllerEnv(Node, Env):
         self.move_model('serp', start_pos[0], start_pos[1], start_pos[2])
         self.move_model('end_beacon', end_pos[0], end_pos[1], 0.0)
 
+        self.lidar_sample = []
         self.wait_lidar_reading()
         self.state = np.array(self.lidar_sample)
 
-        time.sleep(0.1)
-
-        self.lidar_sample = []
         self.distance_to_end = 10.0
         self.collision = False
         self.step_number = 0
