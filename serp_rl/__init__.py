@@ -114,7 +114,9 @@ class SerpControllerEnv(Node, Env):
         else:
             reward = 0
 
-        return self.state, reward, done
+        info = {}
+
+        return self.state, reward, done, info
 
     def render(self): pass
 
