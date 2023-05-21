@@ -79,6 +79,8 @@ class SerpControllerEnv(Node, Env):
         self.wait_lidar_reading()
         self.state = np.array(self.lidar_sample)
 
+        #time.sleep(0.1)
+
         self.distance_to_end = 10.0
         self.collision = False
         self.step_number = 0
