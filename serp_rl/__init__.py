@@ -14,7 +14,6 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_checker import check_env
 
 import numpy as np
-import time
 import threading
 
 class SerpControllerEnv(Node, Env):
@@ -115,9 +114,7 @@ class SerpControllerEnv(Node, Env):
         else:
             reward = 0
 
-        info = {}
-
-        return self.state, reward, done, info
+        return self.state, reward, done
 
     def render(self): pass
 
@@ -173,18 +170,18 @@ class SerpControllerEnv(Node, Env):
         check_env(self)
         self.wait_lidar_reading()
 
-        model = PPO("MlpPolicy", self, verbose=1)
-        model.learn(total_timesteps=25000)
-        model.save("ppo")
+        agent = PPO("MlpPolicy", self, verbose=1)
+        agent.learn(total_timesteps=25000)
+        agent.save("ppo")
 
-        del model 
+        del agent 
 
-        model = PPO.load("ppo")
+        agent = PPO.load("ppo")
 
 
         obs = self.reset()
         while True:
-            action, _states = model.predict(obs)
+            action, _states = agent.predict(obs)
             obs, rewards, dones, info = self.step(action)
 
 def main(args = None):
