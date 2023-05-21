@@ -158,6 +158,7 @@ class SerpControllerEnv(Node, Env):
     # Handle end beacon LiDAR data
     def processEndLiDAR(self, data):
         clean_data = [x for x in data.ranges if str(x) != 'nan']
+        if not clean_data: return
         self.distance_to_end = min(clean_data)
     
     # Process collisions
