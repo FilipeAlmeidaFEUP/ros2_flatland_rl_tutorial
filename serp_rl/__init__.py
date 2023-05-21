@@ -96,6 +96,8 @@ class SerpControllerEnv(Node, Env):
         self.wait_lidar_reading()
         self.change_speed(self.pub, 0.0, 0.0)
 
+        self.state = np.array(self.lidar_sample)
+
         done = False
 
         if self.collision:
