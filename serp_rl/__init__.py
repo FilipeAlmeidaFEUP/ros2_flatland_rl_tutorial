@@ -184,7 +184,7 @@ class SerpControllerEnv(Node, Env):
     # Waits for a new LiDAR reading.
     # A new LiDAR reading is also used to signal when an action should finish being performed.
     def wait_lidar_reading(self):
-        while len(self.lidar_sample) == 0:pass
+        while len(self.lidar_sample) != self.n_lidar_sections: pass
 
     # Send a request to move a model
     def move_model(self, model_name, x, y, theta):
