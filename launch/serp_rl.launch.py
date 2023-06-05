@@ -25,7 +25,7 @@ def generate_launch_description():
                 name="world_path",
                 default_value=PathJoinSubstitution([pkg_share, "world/world.yaml"]),
             ),
-            DeclareLaunchArgument(name="update_rate", default_value="100.0"),
+            DeclareLaunchArgument(name="update_rate", default_value="1000.0"),
             DeclareLaunchArgument(name="step_size", default_value="0.01"),
             DeclareLaunchArgument(name="show_viz", default_value="true"),
             DeclareLaunchArgument(name="viz_pub_rate", default_value="30.0"),

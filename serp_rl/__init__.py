@@ -14,6 +14,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.env_checker import check_env
 
 import numpy as np
+import time
 import threading
 
 class SerpControllerEnv(Node, Env):
@@ -24,27 +25,41 @@ class SerpControllerEnv(Node, Env):
         linear_speed = 0.5
         angular_speed = 1.57079632679
 
-        self.actions = [(0.0, 0.0), 
-                        (linear_speed, 0.0), 
-                        (-linear_speed, 0.0), 
-                        (0.0, angular_speed), 
-                        (0.0, -angular_speed), 
-                        (linear_speed, angular_speed), 
-                        (linear_speed, -angular_speed)]
+        # Set of actions. Defined by their linear and angular speed
+        self.actions = [(linear_speed, 0.0), # move forward
+                        (0.0, angular_speed), # rotate left
+                        (0.0, -angular_speed)] # rotate right
 
+        # How close the robot needs to be to the target to finish the task
         self.end_range = 0.2
 
+        # Number of divisions of the LiDAR
         self.n_lidar_sections = 9
         self.lidar_sample = []
 
+        # Variables that track a possible end state
+        # current distance to target
         self.distance_to_end = 10.0
+        # true if a collision happens
         self.collision = False
 
-        self.position = 0
+        # Possible starting positions
         self.start_positions = [(0.0, 0.0, 1.57079632679), (1.6, 1.6, 3.14159265359)]
+        # Current position
+        self.position = 0
 
         self.step_number = 0
+
+        # Maximum number of steps before it times out
         self.max_steps = 200
+
+        # Records previous action taken. At the start of an episode, there is no prior action so -1 is assigned
+        self.previous_action = -1
+
+        # Used for data collection during training
+        self.total_step_cnt = 0
+        self.total_episode_cnt = 0
+        self.training = False
                                     
         # **** Create publishers ****
         self.pub:Publisher = self.create_publisher(Twist, "/cmd_vel", 1)
@@ -58,69 +73,106 @@ class SerpControllerEnv(Node, Env):
         self.create_subscription(Collisions, "/collisions", self.processCollisions, 1)
         # ******************************
 
-        self.action_space = Discrete(len(self.actions))
+        # **** Define action and state spaces ****
 
+        # action is an integer between 0 and 2 (total of 3 actions)
+        self.action_space = Discrete(len(self.actions))
+        # state is represented by a numpy.Array with size 9 and values between 0 and 2
         self.observation_space = Box(0, 2, shape=(self.n_lidar_sections,), dtype=np.float64)
 
+        # ****************************************
+
+        # Initial state
         self.state = np.array(self.lidar_sample)
 
+    # Resets the environment to an initial state
     def reset(self):
+        # Make sure the robot is stopped
         self.change_speed(self.pub, 0.0, 0.0)
 
+        if self.total_step_cnt != 0: self.total_episode_cnt += 1
+
+        # **** Move robot and end beacon to new positions ****
         start_pos = self.start_positions[self.position]
         self.position = 1 - self.position
         end_pos = self.start_positions[self.position]
         
         self.move_model('serp', start_pos[0], start_pos[1], start_pos[2])
         self.move_model('end_beacon', end_pos[0], end_pos[1], 0.0)
+        # ****************************************************
 
+        # **** Reset necessary values ****
         self.lidar_sample = []
         self.wait_lidar_reading()
         self.state = np.array(self.lidar_sample)
 
-        #time.sleep(0.1)
+        # Flatland can sometimes send several collision messages. 
+        # This makes sure that no collisions are wrongfully detected at the start of an episode 
+        time.sleep(0.1)
 
         self.distance_to_end = 10.0
         self.collision = False
         self.step_number = 0
+        self.previous_action = -1
+        # ********************************
 
         return self.state
 
-
+    # Performs a step for the RL agent
     def step(self, action): 
+
+        # **** Performs the action and waits for it to be completed ****
         self.change_speed(self.pub, self.actions[action][0], self.actions[action][1])
-        self.step_number += 1
 
         self.lidar_sample = []
         self.wait_lidar_reading()
         self.change_speed(self.pub, 0.0, 0.0)
+        # **************************************************************
 
+        # Register current state
         self.state = np.array(self.lidar_sample)
 
+        self.step_number += 1
+        self.total_step_cnt += 1
+
+        # **** Calculates the reward and determines if an end state was reached ****
         done = False
 
+        end_state = ''
+
         if self.collision:
-            self.get_logger().info("colision")
+            end_state = "colision"
             reward = -200
             done = True
         elif self.distance_to_end < self.end_range:
-            self.get_logger().info("end")
-            reward = 400 
+            end_state = "finished"
+            reward = 400 + (200 - self.step_number)
             done = True
         elif self.step_number >= self.max_steps:
-            self.get_logger().info("timeout")
+            end_state = "timeout"
             reward = -300 
             done = True
+        elif action == 0:
+            reward = 2
         else:
             reward = 0
+        # **************************************************************************
 
-        info = {}
+        info = {'end_state': end_state}
+
+        if done and self.training:
+            self.get_logger().info('Training - Episode ' + str(self.total_episode_cnt) + ' end state: ' + end_state)
+            self.get_logger().info('Total steps: ' + str(self.total_step_cnt))
 
         return self.state, reward, done, info
 
     def render(self): pass
 
     def close(self): pass
+
+    def reset_counters(self):
+        self.total_step_cnt = 0
+        self.total_episode_cnt = 0
 
     # Change the speed of the robot
     def change_speed(self, publisher, linear, angular):
@@ -129,6 +181,8 @@ class SerpControllerEnv(Node, Env):
         twist_msg.angular.z = angular
         publisher.publish(twist_msg)
 
+    # Waits for a new LiDAR reading.
+    # A new LiDAR reading is also used to signal when an action should finish being performed.
     def wait_lidar_reading(self):
         while len(self.lidar_sample) == 0:pass
 
@@ -144,7 +198,8 @@ class SerpControllerEnv(Node, Env):
         request.pose.theta = theta
         client.call_async(request)
     
-    # Handle LiDAR data
+    # Sample LiDAR data
+    # Divite into sections and sample the lowest value from each
     def processLiDAR(self, data):
         self.lidar_sample = []
 
@@ -157,6 +212,7 @@ class SerpControllerEnv(Node, Env):
 
     
     # Handle end beacon LiDAR data
+    # Lowest value is the distance from robot to target
     def processEndLiDAR(self, data):
         clean_data = [x for x in data.ranges if str(x) != 'nan']
         if not clean_data: return
@@ -167,24 +223,70 @@ class SerpControllerEnv(Node, Env):
         if len(data.collisions) > 0:
             self.collision = True
 
-    def run_rl_alg(self):
+    # Run an entire episode manually for testing purposes
+    # return true if succesful
+    def run_episode(self, agent):
         
+        com_reward = 0
+
+        obs = self.reset()
+        done = False
+        while not done:
+            action, states = agent.predict(obs)
+            obs, rewards, done, info = self.step(action)
+            com_reward += rewards
+        
+        self.get_logger().info('Episode concluded. End state: ' + info['end_state'] + '  Commulative reward: ' + str(com_reward))
+
+        return info['end_state'] == 'finished'
+
+    def run_rl_alg(self):
+
         check_env(self)
         self.wait_lidar_reading()
 
+        # Create the agent
         agent = PPO("MlpPolicy", self, verbose=1)
-        agent.learn(total_timesteps=25000)
-        agent.save("ppo")
 
-        del agent 
+        # Target accuracy
+        min_accuracy = 0.8
+        # Current accuracy
+        accuracy = 0
+        # Number of tested episodes in each iteration
+        n_test_episodes = 20
 
-        agent = PPO.load("ppo")
+        training_iterations = 0
+
+        while accuracy < min_accuracy:
+            training_steps= 5000
+            self.get_logger().info('Starting training for ' + str(training_steps) + ' steps')
+
+            self.training = True
+            self.reset_counters()
+
+            # Train the agent
+            agent.learn(total_timesteps=training_steps)
+
+            self.training = False
+
+            successful_episodes = 0
+
+            # Test the agent
+            for i in range(n_test_episodes):
+                self.get_logger().info('Testing episode number ' + str(i + 1) + '.')
+                if self.run_episode(agent): successful_episodes += 1
+            
+            # Calculate the accuracy
+            accuracy = successful_episodes/n_test_episodes
+
+            self.get_logger().info('Testing finished. Accuracy: ' + str(accuracy))
+
+            training_iterations += 1
+
+        self.get_logger().info('Training Finished. Training iterations: ' + str(training_iterations) + '  Accuracy: ' + str(accuracy))
 
 
-        obs = self.reset()
-        while True:
-            action, _states = agent.predict(obs)
-            obs, rewards, dones, info = self.step(action)
+        agent.save("src/ros2_flatland_rl_tutorial/ppo")
 
 def main(args = None):
     rclpy.init()
