@@ -35,6 +35,8 @@ At this point, if no errors occur, you should be seeing the following world:
 
 ![RL world](images/world.png)
 
+![RL world](images/world.gif)
+
 The robot is currently using the Proximal Policy Optimization (PPO) algorithm to learn how to navigate the hallway from one end to the other. In the begining, the robot is just exploring the environment and practically taking random actions. Over time, it starts to learn what to do in the different scenarios and it will improve at the task.
 
 The target area is represented by the green circle and, every time the task is restarted, the initial and final positions swap so the robot learns how to turn to both the left and the right. The task is restarted if it fails, if there are any collisions or it takes too much time or if it succeeds (reaches the end).
