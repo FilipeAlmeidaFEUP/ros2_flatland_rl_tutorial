@@ -62,7 +62,7 @@ Important definitions before you start:
 - RL Environment: contains information about all possible actions for every state and the respective reward (how good the action is for any given state).
 
 
-Every RL algorithms have the same goal: find the best action for the agent to take to every possible state of the environment. The first step to use RL in robotics (also known as Robot Learning) is to turn the robot (and its sensors) and the map in the environment for the agent to use. 
+Every RL algorithm has the same goal: find the best action for the agent to take to every possible state of the environment. The first step to use RL in robotics (also known as Robot Learning) is to turn the robot (and its sensors) and the map in the environment for the agent to use. 
 
 This is exactly what the OpenAI's Gym package allows us to do with an `Env` class that can be inherited. In this package, we can reuse the node class:
 ```
