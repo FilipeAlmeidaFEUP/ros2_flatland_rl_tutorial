@@ -142,7 +142,7 @@ Returns: The initial state.
 - render: Used to render your environment. Not needed here since it is already rendered in Flatland.
 - close: Runs when the environment is no longer needed. Can be used to close no longer necessary ROS 2 processes.
 
-## Run the RL algorithm
+## Running the RL algorithm
 
 The more recently developed RL algorithms are very effective but also very hard to understand. The good news is that, thanks to the Stable-Baselines3 package, you can completely abstract from how the algorithm works. In fact, if you have a properly setup environment, getting an algorithm to run an agent on it only takes a few lines of code:
 
