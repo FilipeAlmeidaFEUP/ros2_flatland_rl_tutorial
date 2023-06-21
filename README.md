@@ -171,7 +171,9 @@ while True:
   # returns an action based on what it learned
   action, _states = agent.predict(obs)
   
-  obs, rewards, dones = self.step(action)
+  obs, rewards, done = self.step(action)
+  if done:
+    self.reset()
 ```
 
 You can easily store your trained agent in a file and load it later with the functions:
